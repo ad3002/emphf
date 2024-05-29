@@ -56,30 +56,30 @@ namespace emphf {
             std::get<2>(h) += len;
 
             switch (end - cur) {
-                case 23: std::get<2>(h) += (uint64_t(cur[22]) << 56);
-                case 22: std::get<2>(h) += (uint64_t(cur[21]) << 48);
-                case 21: std::get<2>(h) += (uint64_t(cur[20]) << 40);
-                case 20: std::get<2>(h) += (uint64_t(cur[19]) << 32);
-                case 19: std::get<2>(h) += (uint64_t(cur[18]) << 24);
-                case 18: std::get<2>(h) += (uint64_t(cur[17]) << 16);
-                case 17: std::get<2>(h) += (uint64_t(cur[16]) << 8);
+                case 23: std::get<2>(h) += (uint64_t(cur[22]) << 56); [[fallthrough]];
+                case 22: std::get<2>(h) += (uint64_t(cur[21]) << 48); [[fallthrough]];
+                case 21: std::get<2>(h) += (uint64_t(cur[20]) << 40); [[fallthrough]];
+                case 20: std::get<2>(h) += (uint64_t(cur[19]) << 32); [[fallthrough]];
+                case 19: std::get<2>(h) += (uint64_t(cur[18]) << 24); [[fallthrough]];
+                case 18: std::get<2>(h) += (uint64_t(cur[17]) << 16); [[fallthrough]];
+                case 17: std::get<2>(h) += (uint64_t(cur[16]) << 8);  [[fallthrough]];
                 // the first byte of c is reserved for the length
-                case 16: std::get<1>(h) += (uint64_t(cur[15]) << 56);
-                case 15: std::get<1>(h) += (uint64_t(cur[14]) << 48);
-                case 14: std::get<1>(h) += (uint64_t(cur[13]) << 40);
-                case 13: std::get<1>(h) += (uint64_t(cur[12]) << 32);
-                case 12: std::get<1>(h) += (uint64_t(cur[11]) << 24);
-                case 11: std::get<1>(h) += (uint64_t(cur[10]) << 16);
-                case 10: std::get<1>(h) += (uint64_t(cur[9]) << 8);
-                case  9: std::get<1>(h) += (uint64_t(cur[8]));
-                case  8: std::get<0>(h) += (uint64_t(cur[7]) << 56);
-                case  7: std::get<0>(h) += (uint64_t(cur[6]) << 48);
-                case  6: std::get<0>(h) += (uint64_t(cur[5]) << 40);
-                case  5: std::get<0>(h) += (uint64_t(cur[4]) << 32);
-                case  4: std::get<0>(h) += (uint64_t(cur[3]) << 24);
-                case  3: std::get<0>(h) += (uint64_t(cur[2]) << 16);
-                case  2: std::get<0>(h) += (uint64_t(cur[1]) << 8);
-                case  1: std::get<0>(h) += (uint64_t(cur[0]));
+                case 16: std::get<1>(h) += (uint64_t(cur[15]) << 56); [[fallthrough]];
+                case 15: std::get<1>(h) += (uint64_t(cur[14]) << 48); [[fallthrough]];
+                case 14: std::get<1>(h) += (uint64_t(cur[13]) << 40); [[fallthrough]];
+                case 13: std::get<1>(h) += (uint64_t(cur[12]) << 32); [[fallthrough]];
+                case 12: std::get<1>(h) += (uint64_t(cur[11]) << 24); [[fallthrough]]; 
+                case 11: std::get<1>(h) += (uint64_t(cur[10]) << 16); [[fallthrough]];
+                case 10: std::get<1>(h) += (uint64_t(cur[9]) << 8);   [[fallthrough]];
+                case  9: std::get<1>(h) += (uint64_t(cur[8]));        [[fallthrough]];
+                case  8: std::get<0>(h) += (uint64_t(cur[7]) << 56);  [[fallthrough]];
+                case  7: std::get<0>(h) += (uint64_t(cur[6]) << 48);  [[fallthrough]];
+                case  6: std::get<0>(h) += (uint64_t(cur[5]) << 40);  [[fallthrough]];
+                case  5: std::get<0>(h) += (uint64_t(cur[4]) << 32);  [[fallthrough]];
+                case  4: std::get<0>(h) += (uint64_t(cur[3]) << 24);  [[fallthrough]];
+                case  3: std::get<0>(h) += (uint64_t(cur[2]) << 16);  [[fallthrough]];
+                case  2: std::get<0>(h) += (uint64_t(cur[1]) << 8);   [[fallthrough]];
+                case  1: std::get<0>(h) += (uint64_t(cur[0]));        [[fallthrough]];
                 case  0: break; // nothing to add
                 default: assert(false);
             }
