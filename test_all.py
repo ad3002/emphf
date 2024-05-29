@@ -4,7 +4,7 @@ import os
 import sys
 from subprocess import check_call
 
-DEFAULT_FILE = '/usr/share/dict/words'
+DEFAULT_FILE = 'test.dat'
 
 EXES = [
     ('compute_mphf_seq', 'test_mphf'),

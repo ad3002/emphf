@@ -1,4 +1,5 @@
-#pragma once
+#ifndef E_COMMON_H
+#define E_COMMON_H
 
 #include <cstdint>
 #include <iterator>
@@ -11,29 +12,23 @@
 #include <ctime>
 #include <cstring>
 #include <cassert>
+#include <string_view>
+#include <cstdio>
 
 #include "emphf_config.hpp"
 
 namespace emphf {
 
-    std::ostream& logger()
+    inline std::ostream& logger()
     {
+        static std::locale loc;
+        static const std::time_put<char>& tp = std::use_facet<std::time_put<char>>(loc);
         time_t t = std::time(nullptr);
-        // XXX(ot): put_time unsupported in g++ 4.7
-        // return std::cerr
-        //     <<  std::put_time(std::localtime(&t), "%F %T")
-        //     << ": ";
-        std::locale loc;
-        const std::time_put<char>& tp =
-            std::use_facet<std::time_put<char>>(loc);
         const char *fmt = "%F %T";
-        tp.put(std::cerr, std::cerr, ' ',
-               std::localtime(&t), fmt, fmt + strlen(fmt));
+        tp.put(std::cerr, std::cerr, ' ', std::localtime(&t), fmt, fmt + strlen(fmt));
         return std::cerr << ": ";
     }
 
-    // XXX(ot): the following I/O code is adapted from succinct
-    // library, avoiding the dependency for now
     typedef std::pair<uint8_t const*, uint8_t const*> byte_range_t;
 
     struct identity_adaptor
@@ -46,16 +41,26 @@ namespace emphf {
 
     struct stl_string_adaptor
     {
-        byte_range_t operator()(std::string const& s) const
+        byte_range_t operator()(std::string_view s) const
         {
-            const uint8_t* buf = reinterpret_cast<uint8_t const*>(s.c_str());
-            const uint8_t* end = buf + s.size() + 1; // add the null terminator
+            const uint8_t* buf = reinterpret_cast<uint8_t const*>(s.data());
+            const uint8_t* end = buf + s.size();
+            return byte_range_t(buf, end);
+        }
+    };
+
+    struct uint64_adaptor
+    {
+        byte_range_t operator()(uint64_t const& s) const
+        {
+            const uint8_t* buf = reinterpret_cast<uint8_t const*>(&s);
+            const uint8_t* end = buf + 8;
             return byte_range_t(buf, end);
         }
     };
 
     class line_iterator
-        : public std::iterator<std::forward_iterator_tag, const std::string> {
+        : public std::iterator<std::forward_iterator_tag, const std::string_view> {
 
     public:
         line_iterator()
@@ -78,7 +83,7 @@ namespace emphf {
         }
 
         value_type const& operator*() const {
-            return m_line;
+            return m_line_view;
         }
 
         line_iterator& operator++() {
@@ -89,15 +94,10 @@ namespace emphf {
         friend bool operator==(line_iterator const& lhs, line_iterator const& rhs)
         {
             if (!lhs.m_is || !rhs.m_is) {
-                if (!lhs.m_is && !rhs.m_is) {
-                    return true;
-                } else {
-                    return false;
-                }
+                return !lhs.m_is && !rhs.m_is;
             }
 
             assert(lhs.m_is == rhs.m_is);
-
             return rhs.m_pos == lhs.m_pos;
         }
 
@@ -112,8 +112,6 @@ namespace emphf {
             assert(m_is);
             fseek(m_is, m_pos, SEEK_SET);
 
-            // this is significantly faster than std::getline on C++
-            // streams
             auto avail = getline(&m_buf, &m_buf_len, m_is);
             if (avail == -1) {
                 m_is = nullptr;
@@ -121,17 +119,16 @@ namespace emphf {
             }
             m_pos = ftell(m_is);
 
-            // trim newline character
             if (avail && m_buf[avail - 1] == '\n') {
                 avail -= 1;
             }
 
-            m_line.assign(m_buf, m_buf + avail);
+            m_line_view = std::string_view(m_buf, avail);
         }
 
         FILE* m_is;
         long m_pos;
-        std::string m_line;
+        std::string_view m_line_view;
         char* m_buf;
         size_t m_buf_len;
     };
@@ -139,22 +136,17 @@ namespace emphf {
     class file_lines
     {
     public:
-        file_lines(const char* filename)
+        explicit file_lines(const char* filename)
+            : m_is(fopen(filename, "rb"), &fclose)
         {
-            m_is = fopen(filename, "rb");
             if (!m_is) {
                 throw std::invalid_argument("Error opening " + std::string(filename));
             }
         }
 
-        ~file_lines()
-        {
-            fclose(m_is);
-        }
-
         line_iterator begin() const
         {
-            return line_iterator(m_is);
+            return line_iterator(m_is.get());
         }
 
         line_iterator end() const { return line_iterator(); }
@@ -162,12 +154,12 @@ namespace emphf {
         size_t size() const
         {
             size_t lines = 0;
-            fseek(m_is, 0, SEEK_SET);
+            fseek(m_is.get(), 0, SEEK_SET);
             static const size_t buf_size = 4096;
             char buf[buf_size];
             size_t avail;
             bool last_is_newline = false;
-            while ((avail = fread(buf, 1, buf_size, m_is))) {
+            while ((avail = fread(buf, 1, buf_size, m_is.get()))) {
                 for (size_t i = 0; i < avail; ++i) {
                     if (buf[i] == '\n') lines += 1;
                 }
@@ -180,11 +172,7 @@ namespace emphf {
         }
 
     private:
-        // noncopyble
-        file_lines(file_lines const&);
-        file_lines& operator=(file_lines const&);
-
-        FILE* m_is;
+        std::unique_ptr<FILE, decltype(&fclose)> m_is;
     };
 
     template <typename Iterator>
@@ -195,11 +183,8 @@ namespace emphf {
             , m_end(e)
         {}
 
-        Iterator begin() const
-        { return m_begin; }
-
-        Iterator end() const
-        { return m_end; }
+        Iterator begin() const { return m_begin; }
+        Iterator end() const { return m_end; }
 
         Iterator m_begin, m_end;
     };
@@ -210,15 +195,15 @@ namespace emphf {
         return iter_range<Iterator>(begin, end);
     }
 
-    uint64_t nonzero_pairs(uint64_t x)
+    inline uint64_t nonzero_pairs(uint64_t x)
     {
-        static const uint64_t ones_step_4  = 0x1111111111111111ULL;
+        static const uint64_t ones_step_4 = 0x1111111111111111ULL;
         x = (x | (x >> 1)) & (0x5 * ones_step_4);
 
 #if EMPHF_USE_POPCOUNT
         return (uint64_t)__builtin_popcountll(x);
 #else
-        static const uint64_t ones_step_8  = 0x0101010101010101ULL;
+        static const uint64_t ones_step_8 = 0x0101010101010101ULL;
         x = (x & 3 * ones_step_4) + ((x >> 2) & 3 * ones_step_4);
         x = (x + (x >> 4)) & 0x0f * ones_step_8;
         return (x * ones_step_8) >> 56;
@@ -232,7 +217,7 @@ namespace emphf {
     }
 
     struct uninitialized_uint64 {
-        uninitialized_uint64() {}
+        uninitialized_uint64() = default;
 
         uninitialized_uint64& operator=(uint64_t v)
         {
@@ -255,3 +240,5 @@ namespace emphf {
     };
 
 }
+
+#endif

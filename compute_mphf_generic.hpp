@@ -1,7 +1,10 @@
+#pragma once
+
 #include <iostream>
 #include <fstream>
 #include <iterator>
 #include <random>
+#include <cmath>
 
 #include "common.hpp"
 #include "mphf.hpp"
@@ -22,7 +25,6 @@ namespace emphf {
 
         const char* filename = argv[1];
         std::string output_filename;
-
         if (argc >= 3) {
             output_filename = argv[2];
         }
@@ -34,21 +36,23 @@ namespace emphf {
         logger() << n << " strings to process." << std::endl;
 
         stl_string_adaptor adaptor;
-        typedef mphf<BaseHasher>mphf_t;
+        using mphf_t = mphf<BaseHasher>;
         mphf_t mphf;
 
-        size_t max_nodes = (size_t(std::ceil(double(n) * 1.23)) + 2) / 3 * 3;
+        size_t max_nodes = (static_cast<size_t>(std::ceil(static_cast<double>(n) * 1.23)) + 2) / 3 * 3;
         if (max_nodes >= uint64_t(1) << 32) {
             logger() << "Using 64-bit sorter" << std::endl;
             HypergraphSorter64 sorter;
-            mphf_t(sorter, n, lines, adaptor).swap(mphf);
+            mphf_t mphf_instance(sorter, n, lines, adaptor);
+            mphf_instance.swap(mphf);
         } else {
             logger() << "Using 32-bit sorter" << std::endl;
             HypergraphSorter32 sorter;
-            mphf_t(sorter, n, lines, adaptor).swap(mphf);
+            mphf_t mphf_instance(sorter, n, lines, adaptor);
+            mphf_instance.swap(mphf);
         }
 
-        if (output_filename.size()) {
+        if (!output_filename.empty()) {
             std::ofstream os(output_filename, std::ios::binary);
             mphf.save(os);
         }

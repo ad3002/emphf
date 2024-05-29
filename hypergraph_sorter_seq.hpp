@@ -18,40 +18,33 @@ namespace emphf {
     template <typename HypergraphType>
     class hypergraph_sorter_seq {
     public:
-        typedef HypergraphType hg;
-        typedef typename hg::node_t node_t;
-        typedef typename hg::hyperedge hyperedge;
-        typedef typename hg::xored_adj_list xored_adj_list;
+        using hg = HypergraphType;
+        using node_t = typename hg::node_t;
+        using hyperedge = typename hg::hyperedge;
+        using xored_adj_list = typename hg::xored_adj_list;
 
-        hypergraph_sorter_seq()
-        {}
+        hypergraph_sorter_seq() noexcept = default;
 
         template <typename Range, typename EdgeGenerator>
-        bool try_generate_and_sort(Range const& input_range,
-                                   EdgeGenerator const& edge_gen,
+        bool try_generate_and_sort(const Range& input_range,
+                                   const EdgeGenerator& edge_gen,
                                    size_t n,
                                    size_t hash_domain,
                                    bool verbose = true)
         {
             using std::get;
-            std::vector<xored_adj_list> adj_lists;
-
             size_t m = hash_domain * 3;
 
-            // do all the allocations upfront
             m_peeling_order.clear();
             m_peeling_order.reserve(n);
-            adj_lists.resize(m);
+            std::vector<xored_adj_list> adj_lists(m);
 
-            // generate edges
             if (verbose) {
-                logger() << "Generating hyperedges and populating adjacency lists"
-                         << std::endl;
+                logger() << "Generating hyperedges and populating adjacency lists" << std::endl;
             }
 
-            for (auto const& val: input_range) {
+            for (const auto& val : input_range) {
                 auto edge = edge_gen(val);
-                // canonical by construction
                 assert(orientation(edge) == 0);
 
                 adj_lists[edge.v0].add_edge(edge);
@@ -63,7 +56,6 @@ namespace emphf {
                 adj_lists[edge.v0].add_edge(edge);
             }
 
-            // peel
             if (verbose) {
                 logger() << "Peeling" << std::endl;
             }
@@ -89,7 +81,7 @@ namespace emphf {
                 visit(v0);
 
                 while (queue_position < m_peeling_order.size()) {
-                    auto const& cur_edge = m_peeling_order[queue_position];
+                    const auto& cur_edge = m_peeling_order[queue_position];
 
                     visit(cur_edge.v1);
                     visit(cur_edge.v2);
@@ -99,9 +91,7 @@ namespace emphf {
 
             if (m_peeling_order.size() < n) {
                 if (verbose) {
-                    logger() << "Hypergraph is not peelable: "
-                             << (n - m_peeling_order.size()) << " edges remaining"
-                             << std::endl;
+                    logger() << "Hypergraph is not peelable: " << (n - m_peeling_order.size()) << " edges remaining" << std::endl;
                 }
                 return false;
             }
@@ -111,19 +101,14 @@ namespace emphf {
             return true;
         }
 
-        typedef typename std::vector<hyperedge>::const_reverse_iterator
-        peeling_iterator;
+        using peeling_iterator = typename std::vector<hyperedge>::const_reverse_iterator;
 
-        std::pair<peeling_iterator, peeling_iterator>
-        get_peeling_order() const
+        std::pair<peeling_iterator, peeling_iterator> get_peeling_order() const noexcept
         {
-            return std::make_pair(m_peeling_order.crbegin(),
-                                  m_peeling_order.crend());
+            return {m_peeling_order.crbegin(), m_peeling_order.crend()};
         }
 
     private:
-
-        size_t m_hash_domain;
         std::vector<hyperedge> m_peeling_order;
     };
 }
