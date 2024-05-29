@@ -20,6 +20,7 @@ namespace emphf {
 
         bool check = false;
         if (argc > 3 && std::string_view(argv[3]) == "--check") {
+        if (argc > 3 && std::string_view(argv[3]) == "--check") {
             logger() << "Will perform results checking (this affects avg. time)"
                      << std::endl;
             check = true;
@@ -51,6 +52,7 @@ namespace emphf {
             std::ifstream is(hash_filename, std::ios::binary);
             mphf.load(is);
             file_size = static_cast<size_t>(is.tellg());
+            file_size = static_cast<size_t>(is.tellg());
         }
 
         size_t n = mphf.size();
@@ -60,6 +62,7 @@ namespace emphf {
             all_lookups.reserve(n);
         }
 
+        const uint8_t* pool_base = reinterpret_cast<const uint8_t*>(strings_pool.data());
         const uint8_t* pool_base = reinterpret_cast<const uint8_t*>(strings_pool.data());
 
         logger() << "Performing base hashing (for reference)" << std::endl;
@@ -73,6 +76,7 @@ namespace emphf {
         }
         double elapsed = get_time_usecs() - tick;
 
+        logger() << "Avg. " << elapsed / static_cast<double>(test_strings)
         logger() << "Avg. " << elapsed / static_cast<double>(test_strings)
                  << " usecs per base hash computation" << std::endl;
 
@@ -105,6 +109,7 @@ namespace emphf {
                 if (++lookups == lookups_per_sample) {
                     elapsed = get_time_usecs() - tick;
                     stats.add(elapsed / static_cast<double>(lookups));
+                    stats.add(elapsed / static_cast<double>(lookups));
                     tick = get_time_usecs();
                     lookups = 0;
                 }
@@ -120,6 +125,9 @@ namespace emphf {
             auto distinct_lookups = static_cast<size_t>(std::distance(all_lookups.begin(),
                                                                      std::unique(all_lookups.begin(),
                                                                                  all_lookups.end())));
+            auto distinct_lookups = static_cast<size_t>(std::distance(all_lookups.begin(),
+                                                                     std::unique(all_lookups.begin(),
+                                                                                 all_lookups.end())));
             if (distinct_lookups == n) {
                 logger() << "OK" << std::endl;
             } else {
@@ -129,6 +137,7 @@ namespace emphf {
             }
         }
 
+        double bits_per_key = 8.0 * static_cast<double>(file_size) / static_cast<double>(mphf.size());
         double bits_per_key = 8.0 * static_cast<double>(file_size) / static_cast<double>(mphf.size());
         std::cout << "avg_lookup_time\t" << stats.mean() << std::endl
                   << "stddev_lookup_time_percentage\t"
