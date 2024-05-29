@@ -3,6 +3,7 @@
 #include <vector>
 #include <algorithm>
 #include <string_view>
+#include <unordered_set>
 
 #include "common.hpp"
 #include "perfutils.hpp"
@@ -22,7 +23,6 @@ namespace emphf {
         const char* hash_filename = argv[2];
 
         bool check = false;
-        if (argc > 3 && std::string_view(argv[3]) == "--check") {
         if (argc > 3 && std::string_view(argv[3]) == "--check") {
             logger() << "Will perform results checking (this affects avg. time)"
                      << std::endl;
@@ -48,6 +48,11 @@ namespace emphf {
         size_t test_strings = string_endpoints.size() - 1;
         logger() << "Loaded " << test_strings << " strings." << std::endl;
 
+        // // Debug: Print the first few strings
+        // for (size_t i = 0; i < std::min(test_strings, size_t(5)); ++i) {
+        //     logger() << "String " << i << ": " << (strings_pool.data() + string_endpoints[i]) << std::endl;
+        // }
+
         identity_adaptor adaptor;
         MPHF mphf;
         size_t file_size;
@@ -60,7 +65,6 @@ namespace emphf {
             }
             mphf.load(is);
             file_size = static_cast<size_t>(is.tellg());
-            file_size = static_cast<size_t>(is.tellg());
         }
 
         size_t n = mphf.size();
@@ -71,7 +75,6 @@ namespace emphf {
             all_lookups.reserve(n);
         }
 
-        const uint8_t* pool_base = reinterpret_cast<const uint8_t*>(strings_pool.data());
         const uint8_t* pool_base = reinterpret_cast<const uint8_t*>(strings_pool.data());
 
         logger() << "Performing base hashing (for reference)" << std::endl;
@@ -86,7 +89,6 @@ namespace emphf {
         double elapsed = get_time_usecs() - tick;
 
         logger() << "Avg. " << elapsed / static_cast<double>(test_strings)
-        logger() << "Avg. " << elapsed / static_cast<double>(test_strings)
                  << " usecs per base hash computation" << std::endl;
 
         logger() << "Performing lookups" << std::endl;
@@ -97,6 +99,8 @@ namespace emphf {
         tick = get_time_usecs();
         size_t lookups = 0;
         static const size_t lookups_per_sample = 1 << 16;
+
+        std::unordered_set<uint64_t> lookup_set;
 
         for (size_t run = 0; run < runs; ++run) {
             for (size_t i = 0; i < test_strings; ++i) {
@@ -113,11 +117,11 @@ namespace emphf {
                         return 2;
                     }
                     all_lookups.push_back(h);
+                    lookup_set.insert(h);
                 }
 
                 if (++lookups == lookups_per_sample) {
                     elapsed = get_time_usecs() - tick;
-                    stats.add(elapsed / static_cast<double>(lookups));
                     stats.add(elapsed / static_cast<double>(lookups));
                     tick = get_time_usecs();
                     lookups = 0;
@@ -134,9 +138,7 @@ namespace emphf {
             auto distinct_lookups = static_cast<size_t>(std::distance(all_lookups.begin(),
                                                                      std::unique(all_lookups.begin(),
                                                                                  all_lookups.end())));
-            auto distinct_lookups = static_cast<size_t>(std::distance(all_lookups.begin(),
-                                                                     std::unique(all_lookups.begin(),
-                                                                                 all_lookups.end())));
+            logger() << "Number of unique lookups: " << lookup_set.size() << std::endl;
             if (distinct_lookups == n) {
                 logger() << "OK" << std::endl;
             } else {
@@ -146,7 +148,6 @@ namespace emphf {
             }
         }
 
-        double bits_per_key = 8.0 * static_cast<double>(file_size) / static_cast<double>(mphf.size());
         double bits_per_key = 8.0 * static_cast<double>(file_size) / static_cast<double>(mphf.size());
         std::cout << "avg_lookup_time\t" << stats.mean() << std::endl
                   << "stddev_lookup_time_percentage\t"
