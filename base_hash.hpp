@@ -6,30 +6,26 @@
 #include <cstring>
 #include "common.hpp"
 
-
 namespace emphf {
 
-    inline uint64_t unaligned_load64(uint8_t const* from)
+    inline uint64_t unaligned_load64(const uint8_t* from) noexcept
     {
         uint64_t tmp;
-        memcpy(reinterpret_cast<char*>(&tmp), from, 8);
         // XXX(ot): reverse bytes in big-endian architectures
+        std::memcpy(&tmp, from, sizeof(tmp));
         return tmp;
     }
 
-
     struct jenkins64_hasher {
 
-        typedef uint64_t seed_t;
-        typedef uint64_t hash_t;
-        typedef std::tuple<hash_t, hash_t, hash_t> hash_triple_t;
+        using seed_t = uint64_t;
+        using hash_t = uint64_t;
+        using hash_triple_t = std::tuple<hash_t, hash_t, hash_t>;
 
-        jenkins64_hasher()
-        {}
+        jenkins64_hasher() noexcept = default;
 
-        jenkins64_hasher(uint64_t seed)
-            : m_seed(seed)
-        {}
+        explicit jenkins64_hasher(uint64_t seed) noexcept
+            : m_seed(seed) {}
 
         template <typename Rng>
         static jenkins64_hasher generate(Rng& rng)
@@ -38,55 +34,54 @@ namespace emphf {
         }
 
         // Adapted from http://www.burtleburtle.net/bob/c/lookup8.c
-        hash_triple_t operator()(byte_range_t s) const
+        hash_triple_t operator()(byte_range_t s) const noexcept
         {
-            using std::get;
             hash_triple_t h(m_seed, m_seed, 0x9e3779b97f4a7c13ULL);
 
-            size_t len = (size_t)(s.second - s.first);
-            uint8_t const* cur = s.first;
-            uint8_t const* end = s.second;
+            size_t len = static_cast<size_t>(s.second - s.first);
+            const uint8_t* cur = s.first;
+            const uint8_t* end = s.second;
 
             while (end - cur >= 24) {
-                get<0>(h) += unaligned_load64(cur);
+                std::get<0>(h) += unaligned_load64(cur);
                 cur += 8;
-                get<1>(h) += unaligned_load64(cur);
+                std::get<1>(h) += unaligned_load64(cur);
                 cur += 8;
-                get<2>(h) += unaligned_load64(cur);
+                std::get<2>(h) += unaligned_load64(cur);
                 cur += 8;
 
                 mix(h);
             }
 
-            get<2>(h) += len;
+            std::get<2>(h) += len;
 
             switch (end - cur) {
-            case 23: get<2>(h) += (uint64_t(cur[22]) << 56);
-            case 22: get<2>(h) += (uint64_t(cur[21]) << 48);
-            case 21: get<2>(h) += (uint64_t(cur[20]) << 40);
-            case 20: get<2>(h) += (uint64_t(cur[19]) << 32);
-            case 19: get<2>(h) += (uint64_t(cur[18]) << 24);
-            case 18: get<2>(h) += (uint64_t(cur[17]) << 16);
-            case 17: get<2>(h) += (uint64_t(cur[16]) << 8);
+                case 23: std::get<2>(h) += (uint64_t(cur[22]) << 56);
+                case 22: std::get<2>(h) += (uint64_t(cur[21]) << 48);
+                case 21: std::get<2>(h) += (uint64_t(cur[20]) << 40);
+                case 20: std::get<2>(h) += (uint64_t(cur[19]) << 32);
+                case 19: std::get<2>(h) += (uint64_t(cur[18]) << 24);
+                case 18: std::get<2>(h) += (uint64_t(cur[17]) << 16);
+                case 17: std::get<2>(h) += (uint64_t(cur[16]) << 8);
                 // the first byte of c is reserved for the length
-            case 16: get<1>(h) += (uint64_t(cur[15]) << 56);
-            case 15: get<1>(h) += (uint64_t(cur[14]) << 48);
-            case 14: get<1>(h) += (uint64_t(cur[13]) << 40);
-            case 13: get<1>(h) += (uint64_t(cur[12]) << 32);
-            case 12: get<1>(h) += (uint64_t(cur[11]) << 24);
-            case 11: get<1>(h) += (uint64_t(cur[10]) << 16);
-            case 10: get<1>(h) += (uint64_t(cur[ 9]) << 8);
-            case  9: get<1>(h) += (uint64_t(cur[ 8]));
-            case  8: get<0>(h) += (uint64_t(cur[ 7]) << 56);
-            case  7: get<0>(h) += (uint64_t(cur[ 6]) << 48);
-            case  6: get<0>(h) += (uint64_t(cur[ 5]) << 40);
-            case  5: get<0>(h) += (uint64_t(cur[ 4]) << 32);
-            case  4: get<0>(h) += (uint64_t(cur[ 3]) << 24);
-            case  3: get<0>(h) += (uint64_t(cur[ 2]) << 16);
-            case  2: get<0>(h) += (uint64_t(cur[ 1]) << 8);
-            case  1: get<0>(h) += (uint64_t(cur[ 0]));
-            case 0: break; // nothing to add
-            default: assert(false);
+                case 16: std::get<1>(h) += (uint64_t(cur[15]) << 56);
+                case 15: std::get<1>(h) += (uint64_t(cur[14]) << 48);
+                case 14: std::get<1>(h) += (uint64_t(cur[13]) << 40);
+                case 13: std::get<1>(h) += (uint64_t(cur[12]) << 32);
+                case 12: std::get<1>(h) += (uint64_t(cur[11]) << 24);
+                case 11: std::get<1>(h) += (uint64_t(cur[10]) << 16);
+                case 10: std::get<1>(h) += (uint64_t(cur[9]) << 8);
+                case  9: std::get<1>(h) += (uint64_t(cur[8]));
+                case  8: std::get<0>(h) += (uint64_t(cur[7]) << 56);
+                case  7: std::get<0>(h) += (uint64_t(cur[6]) << 48);
+                case  6: std::get<0>(h) += (uint64_t(cur[5]) << 40);
+                case  5: std::get<0>(h) += (uint64_t(cur[4]) << 32);
+                case  4: std::get<0>(h) += (uint64_t(cur[3]) << 24);
+                case  3: std::get<0>(h) += (uint64_t(cur[2]) << 16);
+                case  2: std::get<0>(h) += (uint64_t(cur[1]) << 8);
+                case  1: std::get<0>(h) += (uint64_t(cur[0]));
+                case  0: break; // nothing to add
+                default: assert(false);
             }
 
             mix(h);
@@ -95,7 +90,7 @@ namespace emphf {
         }
 
         // rehash a hash triple
-        hash_triple_t operator()(hash_triple_t h) const
+        hash_triple_t operator()(hash_triple_t h) const noexcept
         {
             std::get<0>(h) += m_seed;
             std::get<1>(h) += m_seed;
@@ -106,14 +101,14 @@ namespace emphf {
             return h;
         }
 
-        void swap(jenkins64_hasher& other)
+        void swap(jenkins64_hasher& other) noexcept
         {
             std::swap(m_seed, other.m_seed);
         }
 
         void save(std::ostream& os) const
         {
-            os.write(reinterpret_cast<char const*>(&m_seed), sizeof(m_seed));
+            os.write(reinterpret_cast<const char*>(&m_seed), sizeof(m_seed));
         }
 
         void load(std::istream& is)
@@ -121,14 +116,13 @@ namespace emphf {
             is.read(reinterpret_cast<char*>(&m_seed), sizeof(m_seed));
         }
 
-        seed_t seed() const
+        seed_t seed() const noexcept
         {
             return m_seed;
         }
 
     protected:
-
-        static void mix(hash_triple_t& h)
+        static void mix(hash_triple_t& h) noexcept
         {
             uint64_t& a = std::get<0>(h);
             uint64_t& b = std::get<1>(h);
@@ -151,57 +145,50 @@ namespace emphf {
         seed_t m_seed;
     };
 
-
-    // This is basically a wrapper to jenkins64_hasher that uses a
-    // 32-bit seed and returns 32-bit hashes by truncation
     struct jenkins32_hasher {
 
-        typedef uint32_t seed_t;
-        typedef uint32_t hash_t;
-        typedef std::tuple<hash_t, hash_t, hash_t> hash_triple_t;
+        using seed_t = uint32_t;
+        using hash_t = uint32_t;
+        using hash_triple_t = std::tuple<hash_t, hash_t, hash_t>;
 
-        jenkins32_hasher()
-        {}
+        jenkins32_hasher() noexcept = default;
 
-        jenkins32_hasher(uint32_t seed)
-            : m_seed(seed)
-        {}
+        explicit jenkins32_hasher(uint32_t seed) noexcept
+            : m_seed(seed) {}
 
         template <typename Rng>
         static jenkins32_hasher generate(Rng& rng)
         {
-            return jenkins32_hasher((uint32_t)rng());
+            return jenkins32_hasher(static_cast<uint32_t>(rng()));
         }
 
-        hash_triple_t operator()(byte_range_t s) const
+        hash_triple_t operator()(byte_range_t s) const noexcept
         {
-            using std::get;
             auto h64 = jenkins64_hasher(seed64())(s);
-            return hash_triple_t((uint32_t)get<0>(h64),
-                                 (uint32_t)get<1>(h64),
-                                 (uint32_t)get<2>(h64));
+            return hash_triple_t(static_cast<uint32_t>(std::get<0>(h64)),
+                                 static_cast<uint32_t>(std::get<1>(h64)),
+                                 static_cast<uint32_t>(std::get<2>(h64)));
         }
 
-        hash_triple_t operator()(hash_triple_t h) const
+        hash_triple_t operator()(hash_triple_t h) const noexcept
         {
-            using std::get;
-            auto h64 = jenkins64_hasher::hash_triple_t(get<0>(h),
-                                                       get<1>(h),
-                                                       get<2>(h));
+            auto h64 = jenkins64_hasher::hash_triple_t(static_cast<uint64_t>(std::get<0>(h)),
+                                                       static_cast<uint64_t>(std::get<1>(h)),
+                                                       static_cast<uint64_t>(std::get<2>(h)));
             h64 = jenkins64_hasher(seed64())(h64);
-            return hash_triple_t((uint32_t)get<0>(h64),
-                                 (uint32_t)get<1>(h64),
-                                 (uint32_t)get<2>(h64));
+            return hash_triple_t(static_cast<uint32_t>(std::get<0>(h64)),
+                                 static_cast<uint32_t>(std::get<1>(h64)),
+                                 static_cast<uint32_t>(std::get<2>(h64)));
         }
 
-        void swap(jenkins32_hasher& other)
+        void swap(jenkins32_hasher& other) noexcept
         {
             std::swap(m_seed, other.m_seed);
         }
 
         void save(std::ostream& os) const
         {
-            os.write(reinterpret_cast<char const*>(&m_seed), sizeof(m_seed));
+            os.write(reinterpret_cast<const char*>(&m_seed), sizeof(m_seed));
         }
 
         void load(std::istream& is)
@@ -209,20 +196,18 @@ namespace emphf {
             is.read(reinterpret_cast<char*>(&m_seed), sizeof(m_seed));
         }
 
-        seed_t seed() const
+        seed_t seed() const noexcept
         {
             return m_seed;
         }
 
     protected:
-
-        uint64_t seed64() const
+        uint64_t seed64() const noexcept
         {
-            return (uint64_t(m_seed) << 32) | m_seed;
+            return (static_cast<uint64_t>(m_seed) << 32) | m_seed;
         }
 
         seed_t m_seed;
-
     };
 
 }
