@@ -1,5 +1,8 @@
 #include <iostream>
 #include <fstream>
+#include <vector>
+#include <algorithm>
+#include <string_view>
 
 #include "common.hpp"
 #include "perfutils.hpp"
@@ -27,7 +30,7 @@ namespace emphf {
 
         logger() << "Testing " << values_filename << std::endl;
 
-        // load in memory for faster lookup
+        // Load strings into memory for faster lookup
         std::vector<char> strings_pool;
         std::vector<size_t> string_endpoints;
         string_endpoints.push_back(0);
@@ -35,25 +38,31 @@ namespace emphf {
         {
             logger() << "Loading strings" << std::endl;
             file_lines lines(values_filename);
-            for (const auto& s: lines) {
+            for (const auto& s : lines) {
                 strings_pool.insert(strings_pool.end(), s.begin(), s.end());
                 string_endpoints.push_back(strings_pool.size());
             }
         }
 
         size_t test_strings = string_endpoints.size() - 1;
+        logger() << "Loaded " << test_strings << " strings." << std::endl;
 
         identity_adaptor adaptor;
         MPHF mphf;
         size_t file_size;
         {
-            logger() << "Loading mphf" << std::endl;
+            logger() << "Loading MPHF" << std::endl;
             std::ifstream is(hash_filename, std::ios::binary);
+            if (!is) {
+                logger() << "Error opening hash file: " << hash_filename << std::endl;
+                return 3;
+            }
             mphf.load(is);
             file_size = static_cast<size_t>(is.tellg());
         }
 
         size_t n = mphf.size();
+        logger() << "MPHF size: " << n << std::endl;
 
         std::vector<uint64_t> all_lookups;
         if (check) {
