@@ -1,6 +1,7 @@
 #pragma once
 
-#include <xmmintrin.h>
+// Removed SSE dependency - not actually used
+// #include <xmmintrin.h>
 #include <vector>
 #include <cassert>
 #include <ostream>
