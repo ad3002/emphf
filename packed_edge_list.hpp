@@ -65,7 +65,7 @@ namespace emphf {
             using value_type = typename packed_edge_list::value_type;
             using difference_type = std::ptrdiff_t;
             using pointer = value_type*;
-            using reference = value_type&;
+            using reference = value_reference;
             
             iterator()
             {}
