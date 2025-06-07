@@ -195,8 +195,12 @@ namespace emphf {
                 }
             }
 
-            struct iterator : std::iterator<std::forward_iterator_tag,
-                                            value_type> {
+            struct iterator {
+                using iterator_category = std::forward_iterator_tag;
+                using value_type = value_type;
+                using difference_type = std::ptrdiff_t;
+                using pointer = value_type*;
+                using reference = value_type&;
 
                 iterator(sorter* s = nullptr)
                     : m_s(s)
