@@ -1,7 +1,9 @@
 #pragma once
 
-// Removed SSE dependency - not actually used
-// #include <xmmintrin.h>
+// Conditional SSE support - only on x86_64, not on ARM64 (macOS M1)
+#if defined(__x86_64__) || defined(_M_X64)
+#include <xmmintrin.h>
+#endif
 #include <vector>
 #include <cassert>
 #include <ostream>
