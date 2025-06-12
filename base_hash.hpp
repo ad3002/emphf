@@ -5,14 +5,28 @@
 #include <algorithm>
 #include <cstring>
 #include "common.hpp"
+#include "platform_compat.hpp"
 
 namespace emphf {
 
-    inline uint64_t unaligned_load64(const uint8_t* from) noexcept
+    // Cross-platform safe unaligned load function
+    EMPHF_FORCE_INLINE uint64_t unaligned_load64(const uint8_t* from) noexcept
     {
         uint64_t tmp;
-        // XXX(ot): reverse bytes in big-endian architectures
+        
+#if EMPHF_ARCH_X86_64
+        // On x86_64, use direct memcpy - it's optimized and safe
         std::memcpy(&tmp, from, sizeof(tmp));
+#elif EMPHF_ARCH_ARM64
+        // On ARM64, unaligned access is handled by hardware, use memcpy
+        std::memcpy(&tmp, from, sizeof(tmp));
+#else
+        // For unknown architectures, use byte-by-byte copy to be safe
+        for (size_t i = 0; i < 8; ++i) {
+            reinterpret_cast<uint8_t*>(&tmp)[i] = from[i];
+        }
+#endif
+        
         return tmp;
     }
 
